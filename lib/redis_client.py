@@ -6,14 +6,14 @@ class RedisManager:
         self.redis: Optional[redis.Redis] = None
     
     async def connect(self):
-        # self.redis = redis.Redis(
-        #     host='localhost',
-        #     port=6379,
-        #     db=0,
-        #     decode_responses=True
-        # )
-        # # Test connection
-        # await self.redis.ping()
+        self.redis = redis.Redis(
+            host='localhost',
+            port=6379,
+            db=0,
+            decode_responses=True
+        )
+        # Test connection
+        await self.redis.ping()
         print("Connected to Redis")
     
     async def disconnect(self):

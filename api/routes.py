@@ -1,11 +1,15 @@
 from fastapi import APIRouter
-
+from lib.redis_client import redis_manager
 router = APIRouter()
 
-@router.get("/items/")
-async def read_items():
-    return [{"item_id": 1, "name": "Item One"}, {"item_id": 2, "name": "Item Two"}]
+@router.get("/key/")
+async def read_items(item_key: str):
+    return {"value": await redis_manager.get(item_key   )}
 
-@router.get("/items/{item_id}")
-async def read_item(item_id: int):
-    return {"item_id": item_id, "name": f"Item {item_id}"}
+@router.post("/key/")
+async def create_item(item_key: str, item_value: str, expire: int = None):
+    return {"success": await redis_manager.set(item_key, item_value, expire)}
+
+@router.delete("/key/")
+async def delete_item(item_key: str):
+    return {"success": await redis_manager.delete(item_key)}
