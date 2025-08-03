@@ -1,5 +1,5 @@
-FastAPI
+fastapi
+redis
+aioredis
 uvicorn
-pydantic
-sqlalchemy
-databases
+gunicorn
