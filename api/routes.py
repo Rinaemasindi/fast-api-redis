@@ -1,6 +1,5 @@
-# api/routes.py - FIXED VERSION with module-specific logging
 from fastapi import APIRouter, HTTPException
-from lib.redis_client import redis_manager, log_file_path, redis_logger
+from lib.redis_client import redis_manager, redis_logger
 import time
 from typing import Optional
 
@@ -16,7 +15,6 @@ async def health_check():
         "status": "healthy",
         "timestamp": time.time(),
         "redis": redis_health,
-        "log_file": log_file_path
     }
 
 @router.get("/health/redis")

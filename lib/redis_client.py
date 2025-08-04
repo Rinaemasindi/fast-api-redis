@@ -1,4 +1,3 @@
-# lib/redis_client.py - FIXED VERSION with module-specific logging
 import redis.asyncio as redis
 import asyncio
 import logging
@@ -9,40 +8,30 @@ import os
 
 def setup_redis_logging():
     """Setup Redis-specific logging that doesn't interfere with other modules"""
-    # Create Redis-specific logger (not root logger)
     redis_logger = logging.getLogger('redis_api')
-    
-    # Only setup if not already configured
+
     if redis_logger.handlers:
         return redis_logger
-    
+
     formatter = logging.Formatter("%(asctime)s %(name)s %(levelname)s:%(message)s")
-    
-    # Determine log file path with better Linux handling
+
     if os.name != "posix":
-        # Windows development environment
         log_file = "/laragon/www/logs/redis_api/redis.log"
         try:
             os.makedirs(os.path.dirname(log_file), exist_ok=True)
         except Exception as e:
-            # Fallback to local directory on Windows too
             log_file = "./logs/redis.log"
             os.makedirs(os.path.dirname(log_file), exist_ok=True)
     else:
-        # Linux environment - try multiple locations
         possible_paths = [
-            "/var/log/api/redis.log",           # Preferred system location
-            f"{os.path.expanduser('~')}/logs/api/redis.log",  # User home directory
-            "./logs/redis.log",                 # Current directory fallback
-            "/tmp/redis_api.log"                # Temp directory last resort
+            "/var/log/api/redis.log",
+            "./logs/redis.log",                    
+            f"{os.path.expanduser('~')}/logs/api/redis.log",
         ]
-        
         log_file = None
         for path in possible_paths:
             try:
-                # Try to create directory and test write permissions
                 os.makedirs(os.path.dirname(path), exist_ok=True)
-                # Test if we can write to this location
                 test_file = f"{path}.test"
                 with open(test_file, 'w') as f:
                     f.write("test")
@@ -53,25 +42,19 @@ def setup_redis_logging():
                 continue
         
         if not log_file:
-            # If all else fails, use current directory
             log_file = "./redis.log"
             print(f"Warning: Could not create log directory, using {log_file}")
     
     try:
-        # Create handlers for Redis logger only
         file_handler = logging.FileHandler(log_file, encoding="utf8")
         file_handler.setFormatter(formatter)
         file_handler.setLevel(logging.INFO)
         redis_logger.addHandler(file_handler)
-        
         print(f"Redis logging configured: {log_file}")
-        
     except Exception as e:
         print(f"Failed to setup file logging: {e}")
-        # Fall back to console only
         pass
     
-    # Console handler only for development
     if os.name != "posix":
         console_handler = logging.StreamHandler()
         console_handler.setFormatter(formatter)
@@ -79,43 +62,10 @@ def setup_redis_logging():
         redis_logger.addHandler(console_handler)
     
     redis_logger.setLevel(logging.INFO)
-    
-    # IMPORTANT: Prevent propagation to root logger
     redis_logger.propagate = False
-    
     return redis_logger
 
-# Setup Redis-specific logging
 redis_logger = setup_redis_logging()
-
-# Get log file path for API responses
-def get_log_file_path():
-    """Get the actual log file path being used"""
-    if os.name != "posix":
-        return "/laragon/www/logs/redis_api/redis.log"
-    else:
-        # Try the same logic as setup_redis_logging to find writable path
-        possible_paths = [
-            "/var/log/api/redis.log",
-            f"{os.path.expanduser('~')}/logs/api/redis.log",
-            "./logs/redis.log",
-            "/tmp/redis_api.log"
-        ]
-        
-        for path in possible_paths:
-            try:
-                os.makedirs(os.path.dirname(path), exist_ok=True)
-                test_file = f"{path}.test"
-                with open(test_file, 'w') as f:
-                    f.write("test")
-                os.remove(test_file)
-                return path
-            except (PermissionError, OSError, FileNotFoundError):
-                continue
-        
-        return "./redis.log"
-
-log_file_path = get_log_file_path()
 
 class RedisConnectionError(Exception):
     """Custom exception for Redis connection errors"""
@@ -141,8 +91,6 @@ class RedisManager:
         self._is_connected = False
         self._health_check_task: Optional[asyncio.Task] = None
         self._connection_lock = asyncio.Lock()
-        
-        # Use Redis-specific logger
         self.logger = redis_logger
     
     async def connect(self, startup_required: bool = False) -> bool:
@@ -348,13 +296,6 @@ class RedisManager:
         except Exception as e:
             self.logger.error(f"Error checking key '{key}': {e}")
             return False
-
-# CREATE SINGLE GLOBAL INSTANCE
-redis_manager = RedisManager(
-    host=os.getenv('REDIS_HOST', 'localhost'),
-    port=int(os.getenv('REDIS_PORT', 6379)),
-    db=int(os.getenv('REDIS_DB', 0)),
-    max_connections=int(os.getenv('REDIS_MAX_CONNECTIONS', 20)),
-    retry_attempts=int(os.getenv('REDIS_RETRY_ATTEMPTS', 3)),
-    retry_delay=float(os.getenv('REDIS_RETRY_DELAY', 1.0))
-)
+        
+# Create a global instance of RedisManager
+redis_manager = RedisManager()
