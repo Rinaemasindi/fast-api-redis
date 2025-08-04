@@ -77,7 +77,7 @@ class RedisManager:
                  port: int = 6379,
                  db: int = 0,
                  max_connections: int = 20,
-                 retry_attempts: int = 3,
+                 retry_attempts: int = 2,
                  retry_delay: float = 1.0,
                  health_check_interval: int = 30):
         self.host = host
