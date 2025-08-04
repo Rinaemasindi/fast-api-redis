@@ -1,21 +1,34 @@
-from fastapi import FastAPI
-from api.routes import router as api_router
-from lib.redis_client import redis_manager
+from fastapi import FastAPI, APIRouter
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
+import logging
+from lib.redis_client import RedisManager as redis_manager, setup_logging
+import time
+from typing import Optional
+import os
 
+log_file_path = setup_logging()
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup
-    await redis_manager.connect()
+    try:
+        await redis_manager.connect(startup_required=False)
+        logger.info("FastAPI startup completed")
+    except Exception as e:
+        logger.error(f"Error during startup: {e}")
     yield
-    # Shutdown
-    await redis_manager.disconnect()
+    try:
+        await redis_manager.disconnect()
+        logger.info("FastAPI shutdown completed")
+    except Exception as e:
+        logger.error(f"Error during shutdown: {e}")
 
-app = FastAPI(lifespan=lifespan)
-app.include_router(api_router)
+app = FastAPI(
+    title="Enhanced FastAPI with Redis",
+    description="FastAPI application with robust Redis integration",
+    lifespan=lifespan
+)
 
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to the FastAPI project!"}
-
+logger.info(f"FastAPI application starting up - Log file: {log_file_path}")
+logger.info(f"Redis configuration - Host: {os.getenv('REDIS_HOST', 'localhost')}:{os.getenv('REDIS_PORT', 6379)}")
